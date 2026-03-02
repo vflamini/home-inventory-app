@@ -513,6 +513,7 @@
           <button class="btn-primary" onclick={updateItem}>Save Changes</button>
         </div>
       </div>
+
     {:else}
       <div class="detail-body">
         <div class="detail-stock-card {isLow(selectedItem) ? 'low' : ''}">
@@ -1167,6 +1168,10 @@
     .modal-backdrop {
       padding: 12px;
       align-items: flex-end;
+    }
+
+    * {
+      font-size: 16px !important; 
     }
   }
 </style>
