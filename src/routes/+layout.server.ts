@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db/index.js';
+import type { ServerLoad } from '@sveltejs/kit';
 
-export async function load() {
+export const load: ServerLoad = async ({ locals }) => {
   const [categoriesData, itemsData] = await Promise.all([
     db.query.categories.findMany({
       with: { subcategories: true },
@@ -20,5 +21,9 @@ export async function load() {
     })
   ]);
 
-  return { categories: categoriesData, items: itemsData };
-}
+  return {
+    user: locals.user,
+    categories: categoriesData,
+    items: itemsData
+  };
+};

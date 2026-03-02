@@ -226,7 +226,7 @@
           <span class="user-avatar">{data.user.username[0].toUpperCase()}</span>
           <span class="user-name">{data.user.username}</span>
         </div>
-        <form method="POST" action="/logout">
+        <form method="POST" action="/api/logout">
           <button class="logout-btn" type="submit" title="Sign out">↩</button>
         </form>
       </div>
