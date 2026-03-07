@@ -258,16 +258,33 @@
 
   async function quickUpdateQuantity(item: Item, delta: number): Promise<void> {
     const newQty = Math.max(0, parseFloat(item.quantity) + delta);
+    const previousQty = item.quantity; // save for rollback
+
+    // Update UI instantly — don't wait for the server
+    items = items.map((i) =>
+      i.id === item.id ? { ...i, quantity: String(newQty) } : i
+    );
+    if (selectedItem?.id === item.id) {
+      selectedItem = { ...selectedItem, quantity: String(newQty) };
+    }
+
+    // Sync with server in the background
     const res = await fetch(`/api/items/${item.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quantity: newQty })
     });
-    if (res.ok) {
-      const updated: Item = await res.json();
-      items = items.map((i) => (i.id === updated.id ? updated : i));
-      if (selectedItem?.id === updated.id) selectedItem = updated;
+
+    if (!res.ok) {
+      // Roll back on failure
+      items = items.map((i) =>
+        i.id === item.id ? { ...i, quantity: previousQty } : i
+      );
+      if (selectedItem?.id === item.id) {
+        selectedItem = { ...selectedItem, quantity: previousQty };
+      }
     }
+    // No need to apply server response — we already set the value we sent
   }
 
   function openDetail(item: Item): void {
