@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { db } from '$lib/server/db/index';
-import { purchases, items } from '$lib/server/db/schema';
+import { db } from '$lib/server/db/index.pg';
+import { purchases, items } from '$lib/server/db/schema.pg';
 import { eq, sql } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ params }) => {

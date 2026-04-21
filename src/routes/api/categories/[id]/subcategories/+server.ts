@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { db } from '$lib/server/db/index.js';
-import { subcategories } from '$lib/server/db/schema.js';
+import { db } from '$lib/server/db/index.pg.js';
+import { subcategories } from '$lib/server/db/schema.pg.js';
 
 export const POST: RequestHandler = async ({ params, request }) => {
   const body = await request.json();

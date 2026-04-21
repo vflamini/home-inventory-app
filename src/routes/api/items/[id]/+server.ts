@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
-import { db } from '$lib/server/db/index.js';
-import { items } from '$lib/server/db/schema.js';
+import { db } from '$lib/server/db/index';
+import { items } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import type { InferInsertModel } from 'drizzle-orm';
 
@@ -30,8 +30,8 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   if (categoryId !== undefined) updateData.categoryId = parseInt(categoryId);
   if (subcategoryId !== undefined) updateData.subcategoryId = subcategoryId ? parseInt(subcategoryId) : null;
   if (unit !== undefined) updateData.unit = unit;
-  if (quantity !== undefined) updateData.quantity = String(quantity);
-  if (threshold !== undefined) updateData.threshold = String(threshold);
+  if (quantity !== undefined) updateData.quantity = Number(quantity);
+  if (threshold !== undefined) updateData.threshold = Number(threshold);
   if (notes !== undefined) updateData.notes = notes;
   updateData.updatedAt = new Date();
 

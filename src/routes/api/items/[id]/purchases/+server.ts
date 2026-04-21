@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
-import { db } from '$lib/server/db/index.js';
-import { purchases, items } from '$lib/server/db/schema.js';
+import { db } from '$lib/server/db/index';
+import { purchases, items } from '$lib/server/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ params }) => {
@@ -19,14 +19,18 @@ export const POST: RequestHandler = async ({ params, request }) => {
   const itemId = parseInt(params.id!);
 
   // Insert the purchase record
-  const [purchase] = await db.insert(purchases).values({
+  const result = db.insert(purchases).values({
     itemId,
     store,
-    pricePerUnit: String(pricePerUnit),
-    quantityBought: String(quantityBought),
+    pricePerUnit,
+    quantityBought,
     notes: notes || null,
     purchasedAt: purchasedAt ? new Date(purchasedAt) : new Date()
-  }).returning();
+  }).run();
+
+  const purchase = db.select().from(purchases)
+    .where(eq(purchases.id, Number(result.lastInsertRowid)))
+    .get();
 
   // Increment the item's quantity
   await db

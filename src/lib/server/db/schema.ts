@@ -1,90 +1,117 @@
-import { pgTable, serial, text, integer, numeric, timestamp, boolean } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import {
+  sqliteTable,
+  text,
+  integer,
+  real,
+} from 'drizzle-orm/sqlite-core';
+import { relations, sql } from 'drizzle-orm';
 
 // ─── Users ───────────────────────────────────────────────────────────────────
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
+export const users = sqliteTable('users', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull()
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
 });
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
-export const sessions = pgTable('sessions', {
+export const sessions = sqliteTable('sessions', {
   id: text('id').primaryKey(), // random token
-  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  expiresAt: timestamp('expires_at').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull()
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
 });
 
 // ─── Categories ───────────────────────────────────────────────────────────────
-export const categories = pgTable('categories', {
-  id: serial('id').primaryKey(),
+export const categories = sqliteTable('categories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),
   color: text('color').notNull().default('#6366f1'),
   icon: text('icon').notNull().default('📦'),
-  createdAt: timestamp('created_at').defaultNow().notNull()
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
 });
 
 // ─── Subcategories ────────────────────────────────────────────────────────────
-export const subcategories = pgTable('subcategories', {
-  id: serial('id').primaryKey(),
+export const subcategories = sqliteTable('subcategories', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
-  categoryId: integer('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').defaultNow().notNull()
+  categoryId: integer('category_id')
+    .notNull()
+    .references(() => categories.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
 });
 
 // ─── Items ────────────────────────────────────────────────────────────────────
-export const items = pgTable('items', {
-  id: serial('id').primaryKey(),
+export const items = sqliteTable('items', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
-  categoryId: integer('category_id').notNull().references(() => categories.id),
+  categoryId: integer('category_id')
+    .notNull()
+    .references(() => categories.id),
   subcategoryId: integer('subcategory_id').references(() => subcategories.id),
   unit: text('unit').notNull().default('units'),
-  quantity: numeric('quantity', { precision: 10, scale: 2 }).notNull().default('0'),
-  threshold: numeric('threshold', { precision: 10, scale: 2 }).notNull().default('1'),
+  quantity: real('quantity').notNull().default(0),
+  threshold: real('threshold').notNull().default(1),
   notes: text('notes'),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
 });
 
 // ─── Purchases ────────────────────────────────────────────────────────────────
-export const purchases = pgTable('purchases', {
-  id: serial('id').primaryKey(),
-  itemId: integer('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+export const purchases = sqliteTable('purchases', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  itemId: integer('item_id')
+    .notNull()
+    .references(() => items.id, { onDelete: 'cascade' }),
   store: text('store').notNull(),
-  pricePerUnit: numeric('price_per_unit', { precision: 10, scale: 2 }).notNull(),
-  quantityBought: numeric('quantity_bought', { precision: 10, scale: 2 }).notNull(),
-  purchasedAt: timestamp('purchased_at').defaultNow().notNull(),
-  notes: text('notes')
+  pricePerUnit: real('price_per_unit').notNull(),
+  quantityBought: real('quantity_bought').notNull(),
+  purchasedAt: integer('purchased_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  notes: text('notes'),
 });
 
 // ─── Relations ────────────────────────────────────────────────────────────────
 export const usersRelations = relations(users, ({ many }) => ({
-  sessions: many(sessions)
+  sessions: many(sessions),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, { fields: [sessions.userId], references: [users.id] })
+  user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   subcategories: many(subcategories),
-  items: many(items)
+  items: many(items),
 }));
 
 export const subcategoriesRelations = relations(subcategories, ({ one, many }) => ({
   category: one(categories, { fields: [subcategories.categoryId], references: [categories.id] }),
-  items: many(items)
+  items: many(items),
 }));
 
 export const itemsRelations = relations(items, ({ one, many }) => ({
   category: one(categories, { fields: [items.categoryId], references: [categories.id] }),
   subcategory: one(subcategories, { fields: [items.subcategoryId], references: [subcategories.id] }),
-  purchases: many(purchases)
+  purchases: many(purchases),
 }));
 
 export const purchasesRelations = relations(purchases, ({ one }) => ({
-  item: one(items, { fields: [purchases.itemId], references: [items.id] })
+  item: one(items, { fields: [purchases.itemId], references: [items.id] }),
 }));

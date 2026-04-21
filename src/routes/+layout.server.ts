@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db/index.js';
+import { db } from '$lib/server/db/index';
 import type { ServerLoad } from '@sveltejs/kit';
 
 export const load: ServerLoad = async ({ locals }) => {
