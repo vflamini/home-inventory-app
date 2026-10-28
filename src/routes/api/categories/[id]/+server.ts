@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index';
 import { categories, subcategories, items } from '$lib/server/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, and } from 'drizzle-orm';
 
 export const PATCH: RequestHandler = async ({ request, params }) => {
   const body = await request.json();
@@ -18,19 +18,23 @@ export const PATCH: RequestHandler = async ({ request, params }) => {
 export const DELETE: RequestHandler = async ({ params }) => {
   const id = parseInt(params.id!);
 
-  // Block deletion while items still belong to this category
-  const referencingItems = await db
+  // Block deletion while ACTIVE items still belong to this category
+  const activeItems = await db
     .select({ id: items.id })
     .from(items)
-    .where(eq(items.categoryId, id))
+    .where(and(eq(items.categoryId, id), eq(items.isActive, true)))
     .limit(1);
 
-  if (referencingItems.length > 0) {
+  if (activeItems.length > 0) {
     return json(
       { error: 'This category still has items. Reassign or delete them first.' },
       { status: 409 }
     );
   }
+
+  // Permanently remove archived items in this category (they would otherwise block the FK)
+  await db.delete(items)
+    .where(and(eq(items.categoryId, id), eq(items.isActive, false)));
 
   // Unassign items from this category's subcategories, which will be cascade-deleted
   const subs = await db

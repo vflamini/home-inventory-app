@@ -141,6 +141,10 @@
           ? { ...c, subcategories: c.subcategories.filter((s) => s.id !== subId) }
           : c
       );
+      data = data;
+    } else {
+      const body = await res.json().catch(() => null);
+      alert(body?.error ?? 'Failed to delete subcategory.');
     }
   }
 
