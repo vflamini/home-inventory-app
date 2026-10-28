@@ -1,10 +1,16 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index';
-import { subcategories } from '$lib/server/db/schema';
+import { subcategories, items } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const DELETE: RequestHandler = async ({ params }) => {
-  await db.delete(subcategories).where(eq(subcategories.id, parseInt(params.id!)));
+  const id = parseInt(params.id!);
+
+  // Unassign the subcategory from any items before deleting it
+  await db.update(items)
+    .set({ subcategoryId: null })
+    .where(eq(items.subcategoryId, id));
+
+  await db.delete(subcategories).where(eq(subcategories.id, id));
   return new Response(null, { status: 204 });
 };

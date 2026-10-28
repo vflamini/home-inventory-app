@@ -151,6 +151,9 @@
       data.categories = data.categories.filter((c) => c.id !== catId);
       if (filterCategory === String(catId)) filterCategory = 'all';
       closeManage();
+    } else {
+      const body = await res.json().catch(() => null);
+      alert(body?.error ?? 'Failed to delete category.');
     }
   }
 
