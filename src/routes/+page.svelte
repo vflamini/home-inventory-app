@@ -17,6 +17,13 @@
     createdAt: string;
   }
 
+  interface Location {
+    id: number;
+    name: string;
+    icon: string;
+    createdAt: string;
+  }
+
   interface Purchase {
     id: number;
     itemId: number;
@@ -32,6 +39,7 @@
     name: string;
     categoryId: number;
     subcategoryId: number | null;
+    locationId: number | null;
     unit: string;
     quantity: string;
     threshold: string;
@@ -41,18 +49,21 @@
     updatedAt: string;
     category: Omit<Category, 'subcategories'> | null;
     subcategory: Subcategory | null;
+    location: Location | null;
     purchases: Purchase[];
   }
 
   interface PageData {
     items: Item[];
     categories: Category[];
+    locations: Location[];
   }
 
   interface NewItemForm {
     name: string;
     categoryId: number | '';
     subcategoryId: number | '';
+    locationId: number | '';
     unit: string;
     quantity: number;
     threshold: number;
@@ -83,6 +94,8 @@
   interface LayoutContext {
     readonly filterCategory: string;
     setFilterCategory(id: string): void;
+    readonly filterLocation: string;
+    setFilterLocation(id: string): void;
   }
 
   // ── Props & Context ────────────────────────────────────────────────────────
@@ -93,6 +106,7 @@
   // ── State ──────────────────────────────────────────────────────────────────
   let items = $state<Item[]>(data.items ?? []);
   let categories = $state<Category[]>(data.categories ?? []);
+  let locations = $state<Location[]>(data.locations ?? []);
 
   let searchQuery = $state<string>('');
   let filterStatus = $state<'all' | 'low' | 'ok'>('all');
@@ -110,6 +124,7 @@
     name: '',
     categoryId: '',
     subcategoryId: '',
+    locationId: '',
     unit: 'units',
     quantity: 0,
     threshold: 1,
@@ -136,6 +151,9 @@
     }
     if (layout.filterCategory !== 'all') {
       result = result.filter((i) => i.categoryId === parseInt(layout.filterCategory));
+    }
+    if (layout.filterLocation !== 'all') {
+      result = result.filter((i) => i.locationId === parseInt(layout.filterLocation));
     }
     if (filterStatus === 'low') {
       result = result.filter((i) => parseFloat(i.quantity) <= parseFloat(i.threshold));
@@ -211,7 +229,7 @@
       const item: Item = await res.json();
       items = [...items, item];
       showAddItem = false;
-      newItem = { name: '', categoryId: '', subcategoryId: '', unit: 'units', quantity: 0, threshold: 1, notes: '' };
+      newItem = { name: '', categoryId: '', subcategoryId: '', locationId: '', unit: 'units', quantity: 0, threshold: 1, notes: '' };
     }
   }
 
@@ -361,6 +379,9 @@
               {#if item.subcategory}
                 <span class="sub-badge">{item.subcategory.name}</span>
               {/if}
+              {#if item.location}
+                <span class="location-badge">{item.location.icon} {item.location.name}</span>
+              {/if}
               {#if isLow(item)}
                 <span class="low-badge">Low</span>
               {/if}
@@ -420,6 +441,7 @@
                   <div class="li-name">
                     {item.name}
                     {#if isLow(item)}<span class="low-badge">⚠ Low</span>{/if}
+                    {#if item.location}<span class="location-badge">{item.location.icon} {item.location.name}</span>{/if}
                   </div>
 
                   <div class="li-stock">
@@ -469,6 +491,9 @@
           {selectedItem.category?.name ?? ''}
           {selectedItem.subcategory ? ' › ' + selectedItem.subcategory.name : ''}
         </span>
+        {#if selectedItem.location}
+          <span class="detail-location">{selectedItem.location.icon} {selectedItem.location.name}</span>
+        {/if}
       </div>
       <button class="close-btn" onclick={closeDetail}>✕</button>
     </div>
@@ -505,6 +530,16 @@
               {/each}
             </select>
           </div>
+        </div>
+
+        <div class="form-group">
+          <label>Location</label>
+          <select class="input" bind:value={editingItem.locationId}>
+            <option value={null}>None</option>
+            {#each locations as loc}
+              <option value={loc.id}>{loc.icon} {loc.name}</option>
+            {/each}
+          </select>
         </div>
 
         <div class="form-row">
@@ -633,6 +668,16 @@
               {/each}
             </select>
           </div>
+        </div>
+
+        <div class="form-group">
+          <label>Location</label>
+          <select class="input" bind:value={newItem.locationId}>
+            <option value="">None</option>
+            {#each locations as loc}
+              <option value={loc.id}>{loc.icon} {loc.name}</option>
+            {/each}
+          </select>
         </div>
 
         <div class="form-row">
@@ -784,6 +829,7 @@
   .card-badges { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 
   .sub-badge { font-size: 10px; background: #1e2030; color: #8b8fa8; padding: 2px 7px; border-radius: 4px; border: 1px solid #2d3045; }
+  .location-badge { font-size: 10px; background: #13231f; color: #6bc7a4; padding: 2px 7px; border-radius: 4px; border: 1px solid #1d4a3a; }
   .low-badge { font-size: 10px; background: #2a1a0e; color: #e8a97b; padding: 2px 7px; border-radius: 4px; border: 1px solid #5c3310; font-weight: 700; }
 
   .card-name { font-size: 14px; font-weight: 600; color: #e8e8e8; margin-bottom: 6px; line-height: 1.3; }
@@ -872,6 +918,7 @@
   .detail-title { flex: 1; min-width: 0; }
   .detail-title h2 { font-family: 'DM Serif Display', serif; font-size: 20px; color: #f0ece0; line-height: 1.2; }
   .detail-title span { font-size: 12px; color: #8b8fa8; }
+  .detail-location { font-size: 12px; color: #6bc7a4; display: block; margin-top: 3px; }
 
   .close-btn {
     background: none; border: none; color: #555870; font-size: 16px;

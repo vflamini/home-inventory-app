@@ -13,6 +13,7 @@ export const GET: RequestHandler = async ({ params }) => {
     with: {
       category: true,
       subcategory: true,
+      location: true,
       purchases: { orderBy: (p, { desc }) => [desc(p.purchasedAt)] }
     }
   });
@@ -23,12 +24,13 @@ export const GET: RequestHandler = async ({ params }) => {
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
   const body = await request.json();
-  const { name, categoryId, subcategoryId, unit, quantity, threshold, notes } = body;
+  const { name, categoryId, subcategoryId, locationId, unit, quantity, threshold, notes } = body;
 
   const updateData: ItemUpdate = {};
   if (name !== undefined) updateData.name = name;
   if (categoryId !== undefined) updateData.categoryId = parseInt(categoryId);
   if (subcategoryId !== undefined) updateData.subcategoryId = subcategoryId ? parseInt(subcategoryId) : null;
+  if (locationId !== undefined) updateData.locationId = locationId ? parseInt(locationId) : null;
   if (unit !== undefined) updateData.unit = unit;
   if (quantity !== undefined) updateData.quantity = Number(quantity);
   if (threshold !== undefined) updateData.threshold = Number(threshold);
@@ -44,6 +46,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
     with: {
       category: true,
       subcategory: true,
+      location: true,
       purchases: { orderBy: (p, { desc }) => [desc(p.purchasedAt)], limit: 5 }
     }
   });

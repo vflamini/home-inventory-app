@@ -51,6 +51,16 @@ export const subcategories = sqliteTable('subcategories', {
     .default(sql`(unixepoch())`),
 });
 
+// ─── Locations ────────────────────────────────────────────────────────────────
+export const locations = sqliteTable('locations', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  icon: text('icon').notNull().default('📍'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 // ─── Items ────────────────────────────────────────────────────────────────────
 export const items = sqliteTable('items', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -59,6 +69,7 @@ export const items = sqliteTable('items', {
     .notNull()
     .references(() => categories.id),
   subcategoryId: integer('subcategory_id').references(() => subcategories.id),
+  locationId: integer('location_id').references(() => locations.id, { onDelete: 'set null' }),
   unit: text('unit').notNull().default('units'),
   quantity: real('quantity').notNull().default(0),
   threshold: real('threshold').notNull().default(1),
@@ -106,9 +117,14 @@ export const subcategoriesRelations = relations(subcategories, ({ one, many }) =
   items: many(items),
 }));
 
+export const locationsRelations = relations(locations, ({ many }) => ({
+  items: many(items),
+}));
+
 export const itemsRelations = relations(items, ({ one, many }) => ({
   category: one(categories, { fields: [items.categoryId], references: [categories.id] }),
   subcategory: one(subcategories, { fields: [items.subcategoryId], references: [subcategories.id] }),
+  location: one(locations, { fields: [items.locationId], references: [locations.id] }),
   purchases: many(purchases),
 }));
 

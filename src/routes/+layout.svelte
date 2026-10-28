@@ -17,10 +17,18 @@
     createdAt: string;
   }
 
+  interface Location {
+    id: number;
+    name: string;
+    icon: string;
+    createdAt: string;
+  }
+
   interface Item {
     id: number;
     name: string;
     categoryId: number;
+    locationId: number | null;
     quantity: string;
     threshold: string;
     isActive: boolean;
@@ -29,14 +37,16 @@
   interface LayoutData {
     items: Item[];
     categories: Category[];
+    locations: Location[];
     user?: { userId: number; username: string };
   }
 
-  let { data = { items: [], categories: [] }, children }: { data: LayoutData; children: Snippet } = $props();
+  let { data = { items: [], categories: [], locations: [] }, children }: { data: LayoutData; children: Snippet } = $props();
 
 	let mobileMenuOpen = $state(false);
 
   let filterCategory = $state<string>('all');
+  let filterLocation = $state<string>('all');
 
   let lowStockCount = $derived(
     (data.items ?? []).filter((i) => parseFloat(i.quantity) <= parseFloat(i.threshold)).length
@@ -45,6 +55,8 @@
   setContext('layout', {
     get filterCategory() { return filterCategory; },
     setFilterCategory(id: string) { filterCategory = id; },
+    get filterLocation() { return filterLocation; },
+    setFilterLocation(id: string) { filterLocation = id; },
   });
 
   const CATEGORY_COLORS: string[] = [
@@ -54,6 +66,10 @@
   const CATEGORY_ICONS: string[] = [
     '📦', '🥑', '🥩', '🥛', '🧈', '🥦', '🍞', '🧂',
     '🫙', '🧴', '🧹', '🐾', '💊', '🍷', '☕', '🌿', '🧊', '🍳'
+  ];
+
+  const LOCATION_ICONS: string[] = [
+    '📍', '🧊', '❄️', '📦', '🗄️', '🧺', '🛒', '🍽️', '🧴', '🚪', '🧯', '💊'
   ];
 
   // Add category modal
@@ -141,6 +157,61 @@
   function handleSubcategoryKeydown(e: KeyboardEvent): void {
     if (e.key === 'Enter') addSubcategory();
   }
+
+  // Add location modal
+  let showAddLocation = $state(false);
+  let newLocation = $state({ name: '', icon: '📍' });
+
+  async function addLocation(): Promise<void> {
+    const res = await fetch('/api/locations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLocation)
+    });
+    if (res.ok) {
+      const loc: Location = await res.json();
+      data.locations = [...data.locations, loc];
+      data = data;
+      showAddLocation = false;
+      newLocation = { name: '', icon: '📍' };
+    }
+  }
+
+  // Manage location modal
+  let managingLocation = $state<Location | null>(null);
+
+  function openManageLocation(loc: Location, e: MouseEvent): void {
+    e.stopPropagation();
+    managingLocation = { ...loc };
+  }
+
+  function closeManageLocation(): void {
+    managingLocation = null;
+  }
+
+  async function updateLocation(): Promise<void> {
+    if (!managingLocation) return;
+    const res = await fetch(`/api/locations/${managingLocation.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: managingLocation.name, icon: managingLocation.icon })
+    });
+    if (res.ok) {
+      const updated: Location = await res.json();
+      data.locations = data.locations.map((l) => (l.id === updated.id ? updated : l));
+      closeManageLocation();
+    }
+  }
+
+  async function deleteLocation(locId: number): Promise<void> {
+    if (!confirm('Delete this location? Items in it will keep their other details.')) return;
+    const res = await fetch(`/api/locations/${locId}`, { method: 'DELETE' });
+    if (res.ok) {
+      data.locations = data.locations.filter((l) => l.id !== locId);
+      if (filterLocation === String(locId)) filterLocation = 'all';
+      closeManageLocation();
+    }
+  }
 </script>
 
 <svelte:head>
@@ -205,6 +276,39 @@
             class="manage-btn"
             onclick={(e) => openManage(cat, e)}
             title="Manage {cat.name}"
+          >⚙</button>
+        </div>
+      {/each}
+    </div>
+
+    <div class="sidebar-locations">
+      <div class="section-header">
+        <span>Locations</span>
+        <button class="icon-btn" onclick={() => showAddLocation = true} title="Add location">+</button>
+      </div>
+
+      <button
+        class="cat-filter {filterLocation === 'all' ? 'active' : ''}"
+        onclick={() => filterLocation = 'all'}
+      >
+        <span>📍</span> All Locations
+        <span class="cat-count">{(data.items ?? []).length}</span>
+      </button>
+
+      {#each (data.locations ?? []) as loc}
+        <div class="cat-row">
+          <button
+            class="cat-filter {filterLocation === String(loc.id) ? 'active' : ''}"
+            onclick={() => filterLocation = String(loc.id)}
+          >
+            <span>{loc.icon}</span>
+            {loc.name}
+            <span class="cat-count">{(data.items ?? []).filter((i) => i.locationId === loc.id).length}</span>
+          </button>
+          <button
+            class="manage-btn"
+            onclick={(e) => openManageLocation(loc, e)}
+            title="Manage {loc.name}"
           >⚙</button>
         </div>
       {/each}
@@ -369,6 +473,82 @@
   </div>
 {/if}
 
+<!-- Add Location Modal -->
+{#if showAddLocation}
+  <div class="modal-backdrop">
+    <div class="modal manage-modal">
+      <div class="modal-header">
+        <h2>Add Location</h2>
+        <button class="close-btn" onclick={() => showAddLocation = false}>✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Location Name *</label>
+          <input class="input" placeholder="e.g. Pantry, Upstairs Fridge…" bind:value={newLocation.name} />
+        </div>
+        <div class="form-group">
+          <label>Icon</label>
+          <div class="icon-picker">
+            {#each LOCATION_ICONS as icon}
+              <button
+                class="icon-opt {newLocation.icon === icon ? 'selected' : ''}"
+                onclick={() => newLocation.icon = icon}
+              >{icon}</button>
+            {/each}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick={() => showAddLocation = false}>Cancel</button>
+        <button class="btn-primary" onclick={addLocation} disabled={!newLocation.name}>Add Location</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Manage Location Modal -->
+{#if managingLocation}
+  <div class="modal-backdrop">
+    <div class="modal manage-modal">
+      <div class="modal-header">
+        <div class="manage-header-title">
+          <span class="manage-cat-icon">{managingLocation.icon}</span>
+          <h2>Edit Location</h2>
+        </div>
+        <button class="close-btn" onclick={closeManageLocation}>✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Name</label>
+          <input class="input" bind:value={managingLocation.name} />
+        </div>
+        <div class="form-group">
+          <label>Icon</label>
+          <div class="icon-picker">
+            {#each LOCATION_ICONS as icon}
+              <button
+                class="icon-opt {managingLocation.icon === icon ? 'selected' : ''}"
+                onclick={() => managingLocation!.icon = icon}
+              >{icon}</button>
+            {/each}
+          </div>
+        </div>
+        <div class="manage-section danger-zone">
+          <div class="manage-section-label">Danger Zone</div>
+          <p class="danger-desc">Deleting a location will unassign it from any items.</p>
+          <button class="btn-danger-full" onclick={() => deleteLocation(managingLocation!.id)}>
+            Delete Location
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick={closeManageLocation}>Cancel</button>
+        <button class="btn-primary" onclick={updateLocation} disabled={!managingLocation.name.trim()}>Save</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
   :global(*, *::before, *::after) { box-sizing: border-box; margin: 0; padding: 0; }
   :global(body) {
@@ -408,7 +588,8 @@
     color: #6366f1; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;
   }
 
-  .sidebar-categories { padding: 16px 12px; flex: 1; }
+  .sidebar-categories { padding: 16px 12px 4px; }
+  .sidebar-locations { padding: 4px 12px 16px; }
 
   .section-header {
     display: flex; align-items: center; justify-content: space-between;
