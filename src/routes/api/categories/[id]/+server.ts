@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { db } from '$lib/server/db/index.pg.js';
-import { categories } from '$lib/server/db/schema.pg.js';
+import { db } from '$lib/server/db/index';
+import { categories } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const PATCH: RequestHandler = async ({ request, params }) => {

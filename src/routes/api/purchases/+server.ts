@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { db } from '$lib/server/db/index.pg';
-import { purchases, items } from '$lib/server/db/schema.pg';
+import { db } from '$lib/server/db/index';
+import { purchases, items } from '$lib/server/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ params }) => {
@@ -24,8 +24,8 @@ export const POST: RequestHandler = async ({ request, params }) => {
   const [purchase] = await db.insert(purchases).values({
     itemId,
     store: store.trim(),
-    pricePerUnit: String(pricePerUnit),
-    quantityBought: String(quantityBought),
+    pricePerUnit,
+    quantityBought,
     notes: notes ?? null,
     purchasedAt: purchasedAt ? new Date(purchasedAt) : new Date()
   }).returning();
